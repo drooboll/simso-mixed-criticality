@@ -1,5 +1,5 @@
 # coding=utf-8
-
+from random import choices
 from collections import deque
 from SimPy.Simulation import Process, Monitor, hold, passivate
 from simso.core.Job import Job
@@ -62,6 +62,11 @@ class TaskInfo(object):
         self.list_activation_dates = list_activation_dates
         self.data = data
         self.preemption_cost = preemption_cost
+
+        # Testing only: example from presentation
+        self.is_hi = identifier <= 2
+        self.wcet_hi = self.wcet * 7 / 4 
+        self.fail_time = 10
 
     @property
     def csdp(self):
@@ -141,6 +146,7 @@ class GenericTask(Process):
         self._cpi_alone = {}
         self._jobs = []
         self.job = None
+        self.is_failed = False
 
     def __lt__(self, other):
         return self.identifier < other.identifier
@@ -199,6 +205,51 @@ class GenericTask(Process):
     def wcet(self):
         """Worst-Case Execution Time in milliseconds."""
         return self._task_info.wcet
+    
+    @property
+    def wcet_hi(self):
+        """
+        WCET in case of survival scheduling
+        """
+        return self._task_info.wcet_hi
+    
+    @property
+    def wcet_lo(self):
+        """
+        WCET in case of mission scheduling
+        """
+        return self._task_info.wcet
+
+    @property
+    def compute_time(self):
+        """
+        Random compute time for every Job
+        """
+        time_driven = True
+        # wcet is used to create Job, so in reality it is a compute time
+        # Normally weights come from gui and not hardcoded
+        if not self.is_high_priority:
+            return self.wcet_lo
+        
+        # Fail once after an offset
+        if time_driven:
+            if not self.is_failed:
+                if self.sim.now_ms() > self._task_info.fail_time:
+                    self.is_failed = True
+                    return self.wcet_hi
+                
+                return self.wcet_lo
+            
+            return self.wcet_lo
+
+        computed = choices([self.wcet_lo, self.wcet_hi], weights=[0.5, 0.5])
+        print(f"{self.identifier}: base {self._task_info.wcet}, computed {computed}")
+        # choices returns a list
+        return computed[0]
+    
+    @property
+    def is_high_priority(self):
+        return self._task_info.is_hi
 
     @property
     def acet(self):
