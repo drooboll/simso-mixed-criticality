@@ -14,5 +14,6 @@ execution_time_model_names = {
     'WCET': 'wcet',
     'ACET': 'acet',
     'Cache Model': 'cache',
-    'Fixed Penalty': 'fixedpenalty'
+    'Fixed Penalty': 'fixedpenalty',
+    'Mixed Criticality': 'mixedcriticality'
 }

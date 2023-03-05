@@ -61,6 +61,7 @@ class Configuration(object):
             self.etm = "wcet"
             self.duration = 100000000
             self.penalty_preemption = 0
+            self.mixed_criticality = False
             self.penalty_migration = 0
             self.cycles_per_ms = 1000000
             self._caches_list = []
