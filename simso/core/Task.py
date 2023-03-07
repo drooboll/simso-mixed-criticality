@@ -233,6 +233,9 @@ class GenericTask(Process):
         
         # Fail once after an offset
         if time_driven:
+            #0 is assumed as no-fail
+            if self._task_info.fail_time == 0:
+                return self.wcet_lo
             if not self.is_failed:
                 if self.sim.now_ms() > self._task_info.fail_time:
                     self.is_failed = True
