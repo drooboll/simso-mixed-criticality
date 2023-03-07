@@ -71,26 +71,26 @@ class AMC(Scheduler):
             self.previous_schedule_type = ScheduleType.LOW_PRORITY
 
 
-    def get_more_prioritaire_jobs(self, job: Job):
+    def get_more_prioritized_jobs(self, job: Job):
         job_prio = self.priorities[job.task.identifier]
 
         other_jobs = [x for x in self.ready_list if x != job]
         return [x for x in other_jobs if self.priorities[x.task.identifier] >= job_prio]
     
-    def get_more_prioritaire_jobs_hi(self, job: Job):
+    def get_more_prioritized_jobs_hi(self, job: Job):
         if not job.task.is_high_priority:
             return [x for x in self.ready_list if x.task.is_high_priority]
         
-        job_prio = self.priorities[job.task.identifier]
+        job_prio = self.priorities_hi[job.task.identifier]
 
         other_jobs = [x for x in self.ready_list if x != job and x.task.is_high_priority]
         return [x for x in other_jobs if self.priorities[x.task.identifier] >= job_prio]
     
-    def get_more_prioritaire_jobs_lo(self, job: Job):
+    def get_more_prioritized_jobs_lo(self, job: Job):
         if job.task.is_high_priority:
             return []
         
-        job_prio = self.priorities[job.task.identifier]
+        job_prio = self.priorities_lo[job.task.identifier]
 
         other_jobs = [x for x in self.ready_list if x != job and not x.task.is_high_priority]
         return [x for x in other_jobs if self.priorities[x.task.identifier] >= job_prio]
@@ -99,35 +99,38 @@ class AMC(Scheduler):
         resp = job.task.wcet_lo
         new_resp = 0
 
-        higher_priority = self.get_more_prioritaire_jobs(job) 
+        higher_priority = self.get_more_prioritized_jobs(job) 
         while new_resp != resp or resp > job.deadline:
             new_resp = resp
             resp = job.task.wcet_lo + sum([x.task.wcet_lo * math.ceil(resp / x.period) for x in higher_priority])
 
+        print(f"LO:Resp for {job.task.identifier} is {resp}")
         return resp
     
     def find_response_time_hi(self, job: Job):
         resp = job.task.wcet_hi
         new_resp = 0
 
-        higher_priority = self.get_more_prioritaire_jobs_hi(job)
+        higher_priority = self.get_more_prioritized_jobs_hi(job)
         while new_resp != resp or resp > job.deadline:
             new_resp = resp
             resp = job.task.wcet_hi + sum([x.task.wcet_hi * math.ceil(resp / x.period) for x in higher_priority])
 
+        print(f"HI:Resp for {job.task.identifier} is {resp}")
         return resp
     
     def find_response_time_lo_hi(self, job: Job):
         resp = job.task.wcet_hi
         new_resp = 0
 
-        higher_priority_lo = self.get_more_prioritaire_jobs_lo(job)
-        higher_priority_hi = self.get_more_prioritaire_jobs_hi(job)
+        higher_priority_lo = self.get_more_prioritized_jobs_lo(job)
+        higher_priority_hi = self.get_more_prioritized_jobs_hi(job)
         while new_resp != resp or resp > job.deadline:
             new_resp = resp
             resp = job.task.wcet_hi + sum([x.task.wcet_lo * math.ceil(resp / x.period) for x in higher_priority_lo]) +\
                 sum([x.task.wcet_hi * math.ceil(resp / x.period) for x in higher_priority_hi])
 
+        print(f"LO_HI:Resp for {job.task.identifier} is {resp}")
         return resp
 
     def schedule(self, cpu: Processor):
