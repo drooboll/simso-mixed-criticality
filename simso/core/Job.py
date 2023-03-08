@@ -45,6 +45,8 @@ class Job(Process):
         self._etm = etm
         self._was_running_on = task.cpu
 
+        self._wcet = task.compute_time
+
         self._on_activate()
 
         self.context_ok = True  # The context is ready to be loaded.
@@ -241,9 +243,9 @@ class Job(Process):
     def wcet(self):
         """
         Worst-Case Execution Time in milliseconds.
-        Equivalent to ``self.task.wcet``.
+        Equivalent to ``self.task.wcet`` only in uiform scheduling
         """
-        return self._task.wcet
+        return self._wcet
 
     @property
     def activation_date(self):

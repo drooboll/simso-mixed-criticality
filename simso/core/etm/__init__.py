@@ -7,7 +7,8 @@ execution_time_models = {
     'wcet': WCET,
     'acet': ACET,
     'cache': CacheModel,
-    'fixedpenalty': FixedPenalty
+    'fixedpenalty': FixedPenalty,
+    'mixedcriticality': WCET
 }
 
 execution_time_model_names = {
