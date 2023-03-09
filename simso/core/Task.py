@@ -63,7 +63,6 @@ class TaskInfo(object):
         self.data = data
         self.preemption_cost = preemption_cost
 
-        # Testing only: example from presentation
         self.is_hi = False
         self.wcet_hi = self.wcet
         self.fail_time = None
