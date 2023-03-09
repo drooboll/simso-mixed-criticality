@@ -105,6 +105,7 @@ class DP_WRAP_MC(Scheduler):
 
             duration_hi = ceil(w * task.wcet_hi / job.period)
             duration_lo = ceil(w * task.wcet / job.period)
+            print(f"Job {job.name}: Duration HI {duration_hi}, duration LO: {duration_lo}")
 
             if self.allocations[proc_id][0] + duration_hi <= w:
                 self.allocations[proc_id][1].append((job, duration_lo))
