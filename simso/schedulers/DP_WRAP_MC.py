@@ -126,7 +126,7 @@ class DP_WRAP_MC(Scheduler):
                         self.allocations[proc_id][0] = w
                     if proc_id + 1 < len(self.processors):
                         if duration1 > duration_lo:
-                            self.allocations[proc_id + 1][1].append((None, (duration_hi - duration_lo) - duration1))
+                            self.allocations[proc_id + 1][1].append((None, (duration_hi - duration_lo) + duration1))
                             self.allocations[proc_id + 1][0] += duration_hi - duration1
                         else:
                             self.allocations[proc_id + 1][1].append((job, duration_lo - duration1))
@@ -204,7 +204,10 @@ class DP_WRAP_MC(Scheduler):
         
         # XXX: there should be something like list.first(cond), right?
         proc_id = self.allocations.index(sorted(self.allocations, key=lambda x: x[0] < w, reverse=True)[0])
-        print(f"{self.sim.now_ms()}: Free proc: {proc_id}, l = {self.allocations[proc_id][0] / w}")
+        if w != 0:
+            print(f"{self.sim.now_ms()}: Free proc: {proc_id}, l = {self.allocations[proc_id][0] / w}")
+        else:
+            print("Suspicious!")
 
         for job in lo_jobs_left.keys():
             if lo_jobs_left[job] == 0:
@@ -317,6 +320,7 @@ class DP_WRAP_MC(Scheduler):
                 decisions.append((None, proc))
                 # On the next slice
                 self._update_type(ScheduleType.LOW_PRORITY)
+                continue
             
             if not l[0] or not l[0][0] or l[0][0].is_active():
                 job = l[0][0]
