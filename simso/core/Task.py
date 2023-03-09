@@ -64,8 +64,8 @@ class TaskInfo(object):
         self.preemption_cost = preemption_cost
 
         # Testing only: example from presentation
-        self.is_hi = None
-        self.wcet_hi = None
+        self.is_hi = False
+        self.wcet_hi = self.wcet
         self.fail_time = None
 
     @property
@@ -233,7 +233,7 @@ class GenericTask(Process):
         
         # Fail once after an offset
         if time_driven:
-            if not self.is_failed:
+            if not self.is_failed and self._task_info.fail_time:
                 if self.sim.now_ms() > self._task_info.fail_time:
                     self.is_failed = True
                     return self.wcet_hi
