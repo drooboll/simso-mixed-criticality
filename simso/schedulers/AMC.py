@@ -1,7 +1,8 @@
+from typing import List
 from simso.schedulers import scheduler
 from simso.core import Scheduler
 from simso.core import Processor
-from simso.core import Job
+from simso.core.Job import Job
 from simso.core import Task
 from simso.core import Timer
 from enum import Enum
@@ -31,9 +32,7 @@ class AMC(Scheduler):
 
     def init(self):
         self.ready_list = []
-        self.priorities_lo = {}
-        self.priorities_lo_hi = {}
-        self.priorities_hi = {}
+        self.priorities = {}
         self.state = ScheduleState.INIT
         self.schedule_type = ScheduleType.LOW_PRORITY
         self.previous_schedule_type = ScheduleType.LOW_PRORITY
@@ -66,33 +65,34 @@ class AMC(Scheduler):
                     job.abort()
 
     def _update_type(self, new_type: ScheduleType) -> None:
-        self.sim.logger.log(f"Switching mode to {new_type}")
+        if new_type != self.schedule_type:
+            self.sim.logger.log(f"Switching mode to {new_type}")
         self.previous_schedule_type = self.schedule_type
         self.schedule_type = new_type
 
-    def get_more_prioritized_jobs(self, job: Job) -> list[Job]:
-        job_prio = self.priorities_lo[job.task.identifier]
+    def get_more_prioritized_jobs(self, job: Job) -> List[Job]:
+        job_prio = self.priorities[job.task.identifier]
 
         other_jobs = [x for x in self.ready_list if x != job]
-        return [x for x in other_jobs if self.priorities_lo[x.task.identifier] >= job_prio]
+        return [x for x in other_jobs if self.priorities[x.task.identifier] >= job_prio]
     
-    def get_more_prioritized_jobs_hi(self, job: Job) -> list[Job]:
+    def get_more_prioritized_jobs_hi(self, job: Job) -> List[Job]:
         if not job.task.is_high_priority:
             return [x for x in self.ready_list if x.task.is_high_priority]
         
-        job_prio = self.priorities_hi[job.task.identifier]
+        job_prio = self.priorities[job.task.identifier]
 
         other_jobs = [x for x in self.ready_list if x != job and x.task.is_high_priority]
-        return [x for x in other_jobs if self.priorities_lo[x.task.identifier] >= job_prio]
+        return [x for x in other_jobs if self.priorities[x.task.identifier] >= job_prio]
     
-    def get_more_prioritized_jobs_lo(self, job: Job) -> list[Job]:
+    def get_more_prioritized_jobs_lo(self, job: Job) -> List[Job]:
         if job.task.is_high_priority:
             return []
         
-        job_prio = self.priorities_lo[job.task.identifier]
+        job_prio = self.priorities[job.task.identifier]
 
         other_jobs = [x for x in self.ready_list if x != job and not x.task.is_high_priority]
-        return [x for x in other_jobs if self.priorities_lo[x.task.identifier] >= job_prio]
+        return [x for x in other_jobs if self.priorities[x.task.identifier] >= job_prio]
 
     def find_response_time_lo(self, job: Job) -> float:
         resp = job.task.wcet_lo
@@ -109,6 +109,8 @@ class AMC(Scheduler):
         resp = job.task.wcet_hi
         new_resp = 0
 
+        if not job.task.is_high_priority:
+            return 0
         higher_priority = self.get_more_prioritized_jobs_hi(job)
         while new_resp != resp and resp < job.deadline:
             new_resp = resp
@@ -120,6 +122,8 @@ class AMC(Scheduler):
         resp = job.task.wcet_hi
         new_resp = 0
 
+        if not job.task.is_high_priority:
+            return 0
         higher_priority_lo = self.get_more_prioritized_jobs_lo(job)
         higher_priority_hi = self.get_more_prioritized_jobs_hi(job)
         while new_resp != resp and resp < job.deadline:
@@ -134,7 +138,7 @@ class AMC(Scheduler):
 
         if not_aborted:
             # job with the highest priority
-            return max(not_aborted, key=lambda x: self.priorities_lo[x.task.identifier])
+            return max(not_aborted, key=lambda x: self.priorities[x.task.identifier])
 
         return None
             
@@ -142,7 +146,7 @@ class AMC(Scheduler):
         high_prority_jobs = [x for x in self.ready_list if x.task.is_high_priority]
 
         if high_prority_jobs:
-            return max(high_prority_jobs, key=lambda x: self.priorities_lo_hi[x.task.identifier])
+            return max(high_prority_jobs, key=lambda x: self.priorities[x.task.identifier])
     
         return None
     
@@ -150,7 +154,7 @@ class AMC(Scheduler):
         high_prority_jobs = [x for x in self.ready_list if x.task.is_high_priority]
 
         if high_prority_jobs:
-            return max(high_prority_jobs, key=lambda x: self.priorities_hi[x.task.identifier])
+            return max(high_prority_jobs, key=lambda x: self.priorities[x.task.identifier])
         
         return None
 
@@ -160,8 +164,6 @@ class AMC(Scheduler):
 
         if self.schedule_count == 1:
             self._find_schedule_order()
-            self._find_schedule_order_hi()
-            self._find_schedule_order_lo_hi()
             self._log_scheduling_order()
 
         if self.timer is not None:
@@ -196,23 +198,9 @@ class AMC(Scheduler):
     
     def _log_scheduling_order(self) -> None:
         # Assume that in the ready_list there are jobs from all tasks
-        priorities_lo = ', '.join([f"{x.task.name} : {self.priorities_lo[x.task.identifier]}" for x in self.ready_list])
-        priorities_lo_hi = ', '.join(
-            [
-                f"{x.task.name} : {self.priorities_lo_hi[x.task.identifier]}"
-                for x in self.ready_list if x.task.is_high_priority
-            ]
-        )
-        priorities_hi = ', '.join(
-            [
-                f"{x.task.name} : {self.priorities_hi[x.task.identifier]}"
-                for x in self.ready_list if x.task.is_high_priority
-            ]
-        )
+        priorities = ', '.join([f"{x.task.name} : {self.priorities[x.task.identifier]}" for x in self.ready_list])
 
-        self.sim.logger.log(f"Priorities in LO: [{priorities_lo}]")
-        self.sim.logger.log(f"Priorities in LO->HI: [{priorities_lo_hi}]")
-        self.sim.logger.log(f"Priorities in HI: [{priorities_hi}]")
+        self.sim.logger.log(f"Priorities: [{priorities}]")
     
     # Down here is a copy-paste code, sorry :(
     def _find_schedule_order(self) -> None:
@@ -221,7 +209,7 @@ class AMC(Scheduler):
         ordered = []
 
         for job in unordered:
-            self.priorities_lo[job.task.identifier] = 1
+            self.priorities[job.task.identifier] = 1
 
         while len(ordered) != self.ready_list:
             ordered_len = len(ordered)
@@ -229,71 +217,18 @@ class AMC(Scheduler):
                 ordered.append(unordered[0])
                 break
             for job in unordered:
-                self.priorities_lo[job.task.identifier] += 1
+                self.priorities[job.task.identifier] += 1
             for i in range(len(unordered)):
-                self.priorities_lo[unordered[i].task.identifier] -= 1
-                resp = self.find_response_time_lo(unordered[i])
-                if resp <= unordered[i].deadline:
+                self.priorities[unordered[i].task.identifier] -= 1
+                resp_lo = self.find_response_time_lo(unordered[i])
+                resp_lo_hi = self.find_response_time_lo_hi(unordered[i])
+                resp_hi = self.find_response_time_hi(unordered[i])
+                if max(resp_lo, resp_hi, resp_lo_hi) <= unordered[i].deadline:
                     ordered.append(unordered[i])
                     unordered.remove(unordered[i])
                     break
             
             # No job is added -> scheduling not possible
             if len(ordered) == ordered_len:
-                self.sim.logger.log("Error in priority assignment in LO mode!")
-                break
-
-    def _find_schedule_order_hi(self) -> None:
-        unordered = [x for x in self.ready_list if x.task.is_high_priority]
-        ordered = []
-
-        for job in unordered:
-            self.priorities_hi[job.task.identifier] = 1
-
-        ordered_len = len(ordered)
-        while len(ordered) != self.ready_list:
-            ordered_len = len(ordered)
-            if len(unordered) == 1:
-                ordered.append(unordered[0])
-                break
-            for job in unordered:
-                self.priorities_hi[job.task.identifier] += 1
-            for i in range(len(unordered)):
-                self.priorities_hi[unordered[i].task.identifier] -= 1
-                resp = self.find_response_time_hi(unordered[i])
-                if resp <= unordered[i].deadline:
-                    ordered.append(unordered[i])
-                    unordered.remove(unordered[i])
-                    break
-            
-            # No job is added -> scheduling not possible
-            if len(ordered) == ordered_len:
-                self.sim.logger.log("Error in priority assignment in LO->HI mode!")
-                break
-    
-    def _find_schedule_order_lo_hi(self) -> None:
-        unordered = [x for x in self.ready_list if x.task.is_high_priority]
-        ordered = []
-
-        for job in unordered:
-            self.priorities_lo_hi[job.task.identifier] = 1
-
-        while len(ordered) != self.ready_list:
-            ordered_len = len(ordered)
-            if len(unordered) == 1:
-                ordered.append(unordered[0])
-                break
-            for job in unordered:
-                self.priorities_lo_hi[job.task.identifier] += 1
-            for i in range(len(unordered)):
-                self.priorities_lo_hi[unordered[i].task.identifier] -= 1
-                resp = self.find_response_time_lo_hi(unordered[i])
-                if resp <= unordered[i].deadline:
-                    ordered.append(unordered[i])
-                    unordered.remove(unordered[i])
-                    break
-            
-            # No job is added -> scheduling not possible
-            if len(ordered) == ordered_len:
-                self.sim.logger.log("Error in priority assignment in HI mode!")
+                self.sim.logger.log("Error in priority assignment!")
                 break
