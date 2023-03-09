@@ -61,7 +61,7 @@ class DP_WRAP_MC(Scheduler):
         # Duration that can be allocated for each processor.
         w = int(self.t_f - self.sim.now())
         proc_id = 0  # Processor id.
-        print(f"{self.sim.now_ms()}: Start ordering, period {w}")
+        print(f"{self.sim.now_ms()}: Start ordering, period {w}, type {self.schedule_type}, last {self.previous_schedule_type}")
 
         hi_tasks = [x for x in task_list if x.is_high_priority]
         lo_tasks = [x for x in task_list if not x.is_high_priority]
@@ -73,6 +73,7 @@ class DP_WRAP_MC(Scheduler):
                     continue
                 # What's left to compute
                 duration = ceil(w * ((task.wcet_hi - job.actual_computation_time) / (job.absolute_deadline - self.sim.now_ms())))
+                print(f"Dration of {job. name} is {duration}")
                 if self.allocations[proc_id][0] + duration <= w:
                     self.allocations[proc_id][1].append((job, duration))
                     # Stub for worst-case
@@ -126,7 +127,7 @@ class DP_WRAP_MC(Scheduler):
                         self.allocations[proc_id][0] = w
                     if proc_id + 1 < len(self.processors):
                         if duration1 > duration_lo:
-                            self.allocations[proc_id + 1][1].append((None, (duration_hi - duration_lo) + duration1))
+                            self.allocations[proc_id + 1][1].append((None, duration_hi - duration1))
                             self.allocations[proc_id + 1][0] += duration_hi - duration1
                         else:
                             self.allocations[proc_id + 1][1].append((job, duration_lo - duration1))
@@ -174,13 +175,16 @@ class DP_WRAP_MC(Scheduler):
 
                 new_allocation = []
                 for alloc in self.allocations[proc_id][1]:
+                    if lo_jobs_left[job] == 0:
+                        continue
                     if alloc[0] is not None:
                         new_allocation.append(alloc)
                         continue
                     if alloc[1] >= lo_jobs_left[job]:
                         left = lo_jobs_left[job]
                         new_allocation.append((job, left))
-                        new_allocation.append((None, alloc[1] - left))
+                        if alloc[1] - left != 0:
+                            new_allocation.append((None, alloc[1] - left))
                         lo_jobs_left[job] = 0
                     else:
                         new_allocation.append((job, alloc[1]))
@@ -243,17 +247,17 @@ class DP_WRAP_MC(Scheduler):
 
                 proc_id += 1
 
-        # Fill with none jobs to make processor happy
-        for allocation in self.allocations:
-            if allocation[0] < w:
-                allocation[1].append((None, w - allocation[0]))
-
         if self.mirroring:
             for allocation in self.allocations:
                 # Rerverse the order of the jobs.
                 # Note: swapping the first and last items should be enough.
                 allocation[1].reverse()
         self.mirroring = not self.mirroring
+
+        # Fill with none jobs to make processor happy
+        for allocation in self.allocations:
+            if allocation[0] < w:
+                allocation[1].append((None, w - allocation[0]))
 
         for p in range(len(self.processors)):
             print(f"{self.sim.now_ms()}: Final -> Proc {p}", ', '.join(f"Job {x[0].name if x and x[0] else 'None'}, r: {x[1]}" for x in self.allocations[p][1]))
@@ -264,7 +268,7 @@ class DP_WRAP_MC(Scheduler):
         """
 
         self.sim.logger.log(f"End job with id {job.task.identifier}, its ret is {job.ret}, its advance is {job.actual_computation_time}")
-        if job.task.is_high_priority and job.actual_computation_time >= job.task.wcet and job.ret > 0.1:
+        if job.task.is_high_priority and job.actual_computation_time >= job.task.wcet and job.ret > 0:
             self._update_type(ScheduleType.HIGH_PRIORITY)
             self.reschedule()
             return
@@ -314,19 +318,21 @@ class DP_WRAP_MC(Scheduler):
         for p in range(len(self.processors)):
             print(f"{self.sim.now_ms()}: Decisions -> Proc {p}", ', '.join(f"Job {x[0].name if x[0] else 'None'}, r: {x[1]}" for x in self.allocations[p][1]))
         decisions = []
+
+        is_charge_insufficent = False
         for z, proc in enumerate(self.processors):
             l = self.allocations[z][1]
             if not l:
                 decisions.append((None, proc))
                 # On the next slice
-                self._update_type(ScheduleType.LOW_PRORITY)
+                is_charge_insufficent = True
                 continue
             
             if not l[0] or not l[0][0] or l[0][0].is_active():
                 job = l[0][0]
                 if job is None:
                     # On the next slice
-                    self._update_type(ScheduleType.LOW_PRORITY)
+                    is_charge_insufficent = True
                     decisions.append((None, proc))
                     continue
 
@@ -337,4 +343,6 @@ class DP_WRAP_MC(Scheduler):
 
         dec_str = [f"Job: {x[0].name if x[0] else 'None'} On cpu {x[1].internal_id}" for x in decisions]
         print(f"Returned decision: {', '.join(dec_str)}")
+        if is_charge_insufficent and self.previous_schedule_type == ScheduleType.HIGH_PRIORITY:
+            self._update_type(ScheduleType.LOW_PRORITY)
         return decisions
