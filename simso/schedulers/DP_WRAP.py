@@ -91,6 +91,8 @@ class DP_WRAP(Scheduler):
         l = self.allocations[z][1]
         if l and l[0][0] is job:
             l.pop(0)
+
+        self.sim.logger.log(f"End job with id {job.task.identifier}")
         self.reschedule(self.processors[z])
 
     def schedule(self, cpu):
@@ -121,7 +123,7 @@ class DP_WRAP(Scheduler):
         decisions = []
         for z, proc in enumerate(self.processors):
             l = self.allocations[z][1]
-            if not l[0][0] or l[0][0].is_active():
+            if not l[0] or not l[0][0] or l[0][0].is_active():
                 decisions.append((l[0][0] if l else None, proc))
 
         return decisions
