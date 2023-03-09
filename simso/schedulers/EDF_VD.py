@@ -1,7 +1,7 @@
 from simso.schedulers import scheduler
 from simso.core import Scheduler
 from simso.core import Processor
-from simso.core import Job
+from simso.core.Job import Job
 from simso.core import Task
 from simso.core import Timer
 from enum import Enum
@@ -16,7 +16,7 @@ class ScheduleState(Enum):
     TERMINATE = 2
     SCHEDULE = 3
 
-EPSILON = 0.1
+EPSILON = 0.01
 EPSILON_CY = 10000
 
 @scheduler("simso.schedulers.EDF_VD")
@@ -31,16 +31,16 @@ class EDF_VD(Scheduler):
         self.ready_list = []
         self.state = ScheduleState.INIT
 
-    def on_activate(self, job: Job):
-        print(self.sim.now_ms(), " ", "OnActivate")
+    def on_activate(self, job: Job) -> None:
+        #print(self.sim.now_ms(), " ", "OnActivate")
         self.ready_list.append(job)
         self.state = ScheduleState.ACTIVATE
 
         job.cpu.resched()
 
-    def on_terminated(self, job: Job):
+    def on_terminated(self, job: Job) -> None:
         self.state = ScheduleState.TERMINATE
-        print(self.sim.now_ms(), " ", "OnTerminate", job.task.identifier)
+        #print(self.sim.now_ms(), " ", "OnTerminate", job.task.identifier)
         self.ready_list.remove(job)
 
         # Abort all the LO jobs
@@ -51,20 +51,21 @@ class EDF_VD(Scheduler):
 
         job.cpu.resched()
 
-    def on_mode_switch(self, cpu : Processor):
+    def on_mode_switch(self, cpu : Processor) -> None:
         print(self.sim.now_ms(), " ", "OnModeSwitch")
         if cpu.running.ret > EPSILON:
             self.schedule_type = ScheduleType.HIGH_PRIORITY
+            self.sim.logger.log("Switched to HI priority")
 
-    def virtual_deadline(self, job: Job):
+    def virtual_deadline(self, job: Job) -> float:
         if job.task.is_high_priority:
             return job.activation_date + job.task.deadline * self.factor
         else:
             return job.activation_date + job.task.deadline
 
-    def schedule(self, cpu: Processor):
+    def schedule(self, cpu: Processor) -> tuple[Job, Processor]:
         self.state = ScheduleState.SCHEDULE
-        print(self.sim.now_ms(), " ", "OnSchedule", self.schedule_type)
+        #print(self.sim.now_ms(), " ", "OnSchedule", self.schedule_type)
 
         self.schedule_count += 1
 
@@ -90,6 +91,7 @@ class EDF_VD(Scheduler):
                 # Switch back to the LO if no more HI tasks
                 if len(self.ready_list) - len(high_prority_jobs):
                     self.schedule_type = ScheduleType.LOW_PRORITY
+                    self.sim.logger.log("Switched to LO priority")
                     not_aborted = [x for x in self.ready_list if not x.aborted]
                     job = min(not_aborted, key=lambda x: self.virtual_deadline(x))
                 else:
@@ -105,7 +107,7 @@ class EDF_VD(Scheduler):
 
         return (job, cpu)
     
-    def _check_schedulability(self):
+    def _check_schedulability(self) -> float:
         utilisation_hi_lo = 0
         utilisation_lo_lo = 0
         utilisation_hi_hi = 0
@@ -127,5 +129,6 @@ class EDF_VD(Scheduler):
         
         else:
             print("Not schedulable :(")
+            self.sim.logger.log(f"System is not schedulable for given x={self.factor}")
             return 1
 
