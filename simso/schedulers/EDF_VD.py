@@ -125,10 +125,23 @@ class EDF_VD(Scheduler):
         print(f"Left: {left}, right: {right}")
 
         if left <= right:
+            self.sim.logger.log(f"System is schedulable with x in [{round(left, 2)}:{round(right, 2)}]")
+
+        if 'x' in self.data:
+            x = self.data['x']
+            if x >= left and x <= right:
+                self.sim.logger.log("System is schedulable")
+            elif x >= left:
+                self.sim.logger.log("System may be schedulable: left condition met")
+            else:
+                self.sim.logger.log("System is not schedulable: left condition not met")
+            return x
+
+        elif left <= right:
+            self.sim.logger.log(f"System is schedulable, auto x: {(left + right) * 0.5}")
             return (left + right) * 0.5
-        
         else:
             print("Not schedulable :(")
-            self.sim.logger.log(f"System is not schedulable for given x={self.factor}")
+            self.sim.logger.log("System is not auto schedulable!")
             return 1
 
