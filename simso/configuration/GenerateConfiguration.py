@@ -113,7 +113,10 @@ def generate_tasks(top, task_info_list, fields):
                       'WCET': str(task.wcet),
                       'ACET': str(task.acet),
                       'preemption_cost': str(task.preemption_cost),
-                      'et_stddev': str(task.et_stddev)})
+                      'et_stddev': str(task.et_stddev),
+                      'WCET_HI': str(task.wcet_hi),
+                      'is_hi': 'yes' if task.is_hi else 'no',
+                      'fail_time': str(task.fail_time)})
         if task.followed_by is not None:
             attrs['followed_by'] = str(task.followed_by)
         if task.stack_file:

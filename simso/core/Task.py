@@ -20,7 +20,8 @@ class TaskInfo(object):
     def __init__(self, name, identifier, task_type, abort_on_miss, period,
                  activation_date, n_instr, mix, stack_file, wcet, acet,
                  et_stddev, deadline, base_cpi, followed_by,
-                 list_activation_dates, preemption_cost, data):
+                 list_activation_dates, preemption_cost, wcet_hi, is_hi,
+                 fail_time, data):
         """
         :type name: str
         :type identifier: int
@@ -39,6 +40,9 @@ class TaskInfo(object):
         :type followed_by: int
         :type list_activation_dates: list
         :type preemption_cost: int
+        :type wcet_hi: float
+        :type is_hi: bool
+        :type fail_time: float
         :type data: dict
         """
         self.name = name
@@ -64,9 +68,9 @@ class TaskInfo(object):
         self.preemption_cost = preemption_cost
 
         # Testing only: example from presentation
-        self.is_hi = False
-        self.wcet_hi = self.wcet
-        self.fail_time = None
+        self.is_hi = is_hi
+        self.wcet_hi = wcet_hi
+        self.fail_time = fail_time
 
     @property
     def csdp(self):

@@ -199,6 +199,12 @@ class Configuration(object):
             # WCET >= 0:
             assert task.wcet >= 0, "WCET must be positive."
 
+            # WCET_HI >= 0:
+            assert task.wcet_hi >= 0, "WCET_HI must be positive."
+
+            # FAIL_TIME >= 0:
+            assert task.fail_time >= 0, "Fail Time must be positive."
+
             # ACET >= 0:
             assert task.acet >= 0, "ACET must be positive."
 
@@ -282,7 +288,8 @@ class Configuration(object):
                  abort_on_miss=True, period=10, activation_date=0,
                  n_instr=0, mix=0.5, stack_file="", wcet=0, acet=0,
                  et_stddev=0, deadline=10, base_cpi=1.0, followed_by=None,
-                 list_activation_dates=[], preemption_cost=0, data=None):
+                 list_activation_dates=[], preemption_cost=0, wcet_hi=0, is_hi=None,
+                 fail_time=0, data=None):
         """
         Helper method to create a TaskInfo and add it to the list of tasks.
         """
@@ -293,7 +300,7 @@ class Configuration(object):
                         activation_date, n_instr, mix,
                         (stack_file, self.cur_dir), wcet, acet, et_stddev,
                         deadline, base_cpi, followed_by, list_activation_dates,
-                        preemption_cost, data)
+                        preemption_cost, wcet_hi, is_hi, fail_time, data)
         self.task_info_list.append(task)
         return task
 

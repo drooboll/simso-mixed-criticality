@@ -112,7 +112,11 @@ class Parser(object):
                 list_activation_dates,
                 int(float(attr['preemption_cost'].value))
                 if 'preemption_cost' in attr else 0,
-                data)
+                float(attr['WCET_HI'].value),
+                'is_hi' not in attr or attr['is_hi'].value == 'yes',
+                float(attr['fail_time'].value) if 'fail_time' in attr else 0,
+                data,
+                )
             self.task_info_list.append(t)
 
     def _parse_processors(self):
