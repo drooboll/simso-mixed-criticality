@@ -42,7 +42,7 @@ class TaskInfo(object):
         :type preemption_cost: int
         :type wcet_hi: float
         :type is_hi: bool
-        :type fail_time: float
+        :type fail_time: int
         :type data: dict
         """
         self.name = name
@@ -229,27 +229,13 @@ class GenericTask(Process):
         """
         Random compute time for every Job
         """
-        time_driven = True
-        # wcet is used to create Job, so in reality it is a compute time
-        # Normally weights come from gui and not hardcoded
-        if not self.is_high_priority:
+        if self._task_info.fail_time is None:
             return self.wcet_lo
         
-        # Fail once after an offset
-        if time_driven:
-            if not self.is_failed and self._task_info.fail_time:
-                if self.sim.now_ms() > self._task_info.fail_time:
-                    self.is_failed = True
-                    return self.wcet_hi
-                
-                return self.wcet_lo
-            
+        if self._task_info.fail_time != self._job_count:
             return self.wcet_lo
-
-        computed = choices([self.wcet_lo, self.wcet_hi], weights=[0.5, 0.5])
-        print(f"{self.identifier}: base {self._task_info.wcet}, computed {computed}")
-        # choices returns a list
-        return computed[0]
+        
+        return self.wcet_hi
     
     @property
     def is_high_priority(self):

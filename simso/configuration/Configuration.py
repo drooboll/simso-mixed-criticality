@@ -202,9 +202,6 @@ class Configuration(object):
             # WCET_HI >= 0:
             assert task.wcet_hi >= 0, "WCET_HI must be positive."
 
-            # FAIL_TIME >= 0:
-            assert task.fail_time >= 0, "Fail Time must be positive."
-
             # ACET >= 0:
             assert task.acet >= 0, "ACET must be positive."
 
