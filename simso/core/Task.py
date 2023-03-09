@@ -63,11 +63,6 @@ class TaskInfo(object):
         self.data = data
         self.preemption_cost = preemption_cost
 
-        # Testing only: example from presentation
-        self.is_hi = identifier <= 2
-        self.wcet_hi = self.wcet * 7 / 4 
-        self.fail_time = 10
-
     @property
     def csdp(self):
         """
