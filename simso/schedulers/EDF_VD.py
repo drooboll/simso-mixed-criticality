@@ -16,7 +16,7 @@ class ScheduleState(Enum):
     TERMINATE = 2
     SCHEDULE = 3
 
-EPSILON = 0.01
+EPSILON = 0.000001
 EPSILON_CY = 10000
 
 @scheduler("simso.schedulers.EDF_VD")
@@ -41,7 +41,8 @@ class EDF_VD(Scheduler):
     def on_terminated(self, job: Job) -> None:
         self.state = ScheduleState.TERMINATE
         #print(self.sim.now_ms(), " ", "OnTerminate", job.task.identifier)
-        self.ready_list.remove(job)
+        if job in self.ready_list:
+            self.ready_list.remove(job)
 
         # Abort all the LO jobs
         if self.schedule_type == ScheduleType.HIGH_PRIORITY and job.task.is_high_priority:
@@ -138,7 +139,7 @@ class EDF_VD(Scheduler):
             return x
 
         elif left <= right:
-            self.sim.logger.log(f"System is schedulable, auto x: {(left + right) * 0.5}")
+            self.sim.logger.log(f"System is schedulable, auto x: {round((left + right) * 0.5, 2)}")
             return (left + right) * 0.5
         else:
             print("Not schedulable :(")

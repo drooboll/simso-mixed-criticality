@@ -310,7 +310,7 @@ class DP_WRAP_MC(Scheduler):
 
         if self.schedule_type == ScheduleType.HIGH_PRIORITY:
             for task in self.task_list:
-                if task.job is not None and not task.is_high_priority:
+                if task.job is not None and not task.is_high_priority and not task.job.aborted:
                     task.job.abort()
 
         # Schedule the activated tasks on each processor.
@@ -336,9 +336,6 @@ class DP_WRAP_MC(Scheduler):
                     decisions.append((None, proc))
                     continue
 
-                if job.task.is_high_priority:
-                    if job.actual_computation_time >= job.task.wcet:
-                        self.sim.logger.log("Hello there: scheduling more than expected")
                 decisions.append((job, proc))
 
         dec_str = [f"Job: {x[0].name if x[0] else 'None'} On cpu {x[1].internal_id}" for x in decisions]

@@ -114,7 +114,8 @@ class Parser(object):
                 if 'preemption_cost' in attr else 0,
                 float(attr['WCET_HI'].value) if 'WCET_HI' in attr else float(attr['WCET'].value),
                 False if 'is_hi' not in attr else attr['is_hi'].value == 'yes',
-                int(attr['fail_time'].value) if 'fail_time' in attr and attr['fail_time'].value != 'None' else None,
+                # Just let it go already
+                int(float(attr['fail_time'].value)) if 'fail_time' in attr and attr['fail_time'].value != 'None' else None,
                 data,
                 )
             self.task_info_list.append(t)

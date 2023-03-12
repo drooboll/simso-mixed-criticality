@@ -19,7 +19,7 @@ class ScheduleState(Enum):
     TERMINATE = 2
     SCHEDULE = 3
 
-EPSILON = 0.1
+EPSILON = 0.000001
 EPSILON_CY = 10000
 
 @scheduler("simso.schedulers.AMC")
